@@ -1,6 +1,29 @@
+# ============================================================
+# ChinaStudyFree iOS 工程配置 —— 免费 Apple ID 构建版
+# 用法：用它【整个替换】仓库里的 apps/mobile/project.yml，commit 后自动触发构建
+#
+# 与原版 project.yml 的区别（免费个人账号不支持 App Groups / iCloud capability）：
+#   1. 删除 Widget 扩展 target（StreakWidget）及主 App 对它的 embed 依赖
+#      —— Widget 靠 App Group 和主 App 共享数据，免费账号没有这个能力
+#   2. 删除主 App 的 entitlements（App Groups + ubiquity-kv-store）
+#
+# 为什么删了不会坏（已逐行核对源码）：
+#   · PersistenceService.syncWidgetSnapshot：containerURL 取不到就 guard return，
+#     注释原话 "never affects the main save path" —— 存档主路径用的是
+#     Application Support，与 App Group 无关
+#   · ProgressStore 的 NSUbiquitousKeyValueStore 镜像："任何失败（超限/无 iCloud/
+#     无授权）都静默" —— 没有 entitlement 时 KVS 只在本机落盘
+#   · 测试代码零引用 Widget / AppGroup
+# 结果：学习、答题、课文、故事、商店、装扮、每日任务全部正常，
+#       只是没有桌面 Widget 和 iCloud 换机备份。
+#
+# 还需要你自己改两处（搜 yourname 替换）：
+#   bundleIdPrefix 和 PRODUCT_BUNDLE_IDENTIFIER
+# ============================================================
+
 name: ChinaTextbookStudy
 options:
-  bundleIdPrefix: com.example
+  bundleIdPrefix: com.kristotal        # ← 改成你的前缀，如 com.kristotal
   deploymentTarget:
     iOS: "17.0"
   createIntermediateGroups: true
@@ -19,7 +42,7 @@ settings:
     INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
     INFOPLIST_KEY_NSHumanReadableCopyright: "本应用内所含教材内容版权归人民教育出版社等原出版方所有。客户端代码采用 MIT 许可开源。"
     INFOPLIST_KEY_NSMicrophoneUsageDescription: "跟读课文需要使用麦克风，录下你的朗读。录音只保存在这台设备上，退出跟读后会自动删除，不会上传。"
-    TARGETED_DEVICE_FAMILY: "1,2"
+    TARGETED_DEVICE_FAMILY: "1,2"     # 1=iPhone 2=iPad，通用包，不用动
     DEVELOPMENT_TEAM: ""
     CODE_SIGN_STYLE: Automatic
 packages:
@@ -37,45 +60,13 @@ targets:
       - path: ChinaTextbookStudy/Resources/seed-data.zip
       - path: ChinaTextbookStudy/Resources/PrivacyInfo.xcprivacy
       - path: ChinaTextbookStudy/Resources/Assets.xcassets
-    entitlements:
-      path: ChinaTextbookStudy/ChinaTextbookStudy.entitlements
-      properties:
-        com.apple.security.application-groups:
-          - group.com.example.ChinaTextbookStudy
-        # 换机存档恢复走 NSUbiquitousKeyValueStore；没有这条 entitlement 时
-        # KVS 只在本机落盘、不与 iCloud 同步，云备份会静默空转。
-        com.apple.developer.ubiquity-kvstore-identifier: $(TeamIdentifierPrefix)$(CFBundleIdentifier)
+    # 注意：与原版的差别 —— 没有 entitlements 块、没有 Widget embed 依赖
     dependencies:
       - package: ZIPFoundation
-      - target: ChinaTextbookStudyWidget
-        embed: true
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.example.ChinaTextbookStudy
+        PRODUCT_BUNDLE_IDENTIFIER: com.kristotal.ChinaTextbookStudy   # ← 改成你的
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-  ChinaTextbookStudyWidget:
-    type: app-extension
-    platform: iOS
-    sources:
-      - path: ChinaTextbookStudyWidget
-        excludes:
-          - "Info.plist"
-          - "*.entitlements"
-    entitlements:
-      path: ChinaTextbookStudyWidget/ChinaTextbookStudyWidget.entitlements
-      properties:
-        com.apple.security.application-groups:
-          - group.com.example.ChinaTextbookStudy
-    info:
-      path: ChinaTextbookStudyWidget/Info.plist
-      properties:
-        CFBundleDisplayName: 课本学习
-        NSExtension:
-          NSExtensionPointIdentifier: com.apple.widgetkit-extension
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.example.ChinaTextbookStudy.widget
-        SKIP_INSTALL: YES
   ChinaTextbookStudyTests:
     type: bundle.unit-test
     platform: iOS
@@ -85,7 +76,7 @@ targets:
       - target: ChinaTextbookStudy
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.example.ChinaTextbookStudyTests
+        PRODUCT_BUNDLE_IDENTIFIER: com.kristotal.ChinaTextbookStudyTests
   ChinaTextbookStudyUITests:
     type: bundle.ui-testing
     platform: iOS
@@ -95,7 +86,7 @@ targets:
       - target: ChinaTextbookStudy
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.example.ChinaTextbookStudyUITests
+        PRODUCT_BUNDLE_IDENTIFIER: com.kristotal.ChinaTextbookStudyUITests
 schemes:
   ChinaTextbookStudy:
     build:
